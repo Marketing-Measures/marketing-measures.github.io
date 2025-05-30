@@ -17,7 +17,7 @@
         width: 80%;
         margin: auto;
         overflow: hidden;
-        padding: 5px; /* Corrected from 5x to 5px */
+        padding: 5x;
         background-color: #fff;
         box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       }
@@ -273,7 +273,7 @@
           <h3>Request Data Download</h3>
           <form
             id="dataRequestForm"
-            action="https://submit-form.com/vjP3hBMuB"
+            action="https://formspree.io/f/xgvywwpa"
             method="POST"
           >
             <div>
@@ -375,35 +375,24 @@
           method: "POST",
           body: formData,
           headers: {
-            Accept: "application/json", // Important for AJAX submission to get JSON response
+            Accept: "application/json",
           },
         })
           .then((response) => {
             if (response.ok) {
-              // Formspark should return 2xx for successful submissions
               form.style.display = "none"; // Hide the form
               downloadLinkContainer.style.display = "block"; // Show the download link
               formStatus.style.display = "none";
             } else {
               response
-                .json() // Attempt to parse error response as JSON
+                .json()
                 .then((data) => {
-                  // Adapt based on Formspark's error response structure
-                  // Common patterns: data.message, data.error, data.errors
-                  if (data && data.message) {
-                    // Example for Formspark if it returns a 'message' field
-                    formStatus.textContent = data.message;
-                  } else if (data && data.error) {
-                    formStatus.textContent = data.error;
-                  } else if (
-                    data &&
-                    data.errors &&
-                    Array.isArray(data.errors)
-                  ) {
-                    // For multiple errors
-                    formStatus.textContent = data.errors
-                      .map((err) => err.message || err) // Try to get err.message, fallback to err itself
+                  if (Object.hasOwn(data, "errors")) {
+                    formStatus.textContent = data["errors"]
+                      .map((error) => error["message"])
                       .join(", ");
+                  } else if (data.error) {
+                    formStatus.textContent = data.error;
                   } else {
                     formStatus.textContent =
                       "Oops! There was a problem submitting your form. Please try again.";
@@ -411,9 +400,8 @@
                   formStatus.style.display = "block";
                 })
                 .catch(() => {
-                  // If response is not JSON or another issue occurs
                   formStatus.textContent =
-                    "Oops! There was a problem processing the response. Please try again.";
+                    "Oops! There was a problem processing the error response. Please try again.";
                   formStatus.style.display = "block";
                 });
             }
