@@ -143,6 +143,10 @@
       button:hover {
         background: #4cae4c;
       }
+      button:disabled {
+        background: #cccccc;
+        cursor: not-allowed;
+      }
       #downloadLinkContainer {
         margin-top: 20px;
         padding: 15px;
@@ -157,6 +161,10 @@
       }
       .error-message {
         color: red;
+        margin-top: 10px;
+      }
+      .success-message {
+        color: #3c763d;
         margin-top: 10px;
       }
       .citation {
@@ -271,11 +279,7 @@
 
         <div class="form-container">
           <h3>Request Data Download</h3>
-          <form
-            id="dataRequestForm"
-            action="https://formspree.io/f/xgvywwpa"
-            method="POST"
-          >
+          <form id="dataRequestForm">
             <div>
               <label for="name">Full Name:</label>
               <input type="text" id="name" name="name" required />
@@ -299,11 +303,13 @@
                 id="intended_use"
                 name="intended_use"
                 rows="3"
-                placeholder="e.g., academic research,  extension to other domains..."
+                placeholder="e.g., academic research, extension to other domains..."
               ></textarea>
             </div>
-            <button type="submit">Submit to Download Data</button>
-            <p id="formStatus" class="error-message" style="display: none"></p>
+            <button type="submit" id="submitButton">
+              Submit to Download Data
+            </button>
+            <p id="formStatus" style="display: none"></p>
           </form>
 
           <div id="downloadLinkContainer" style="display: none">
@@ -313,6 +319,8 @@
             </p>
             <a
               href="https://www.dropbox.com/scl/fo/fytx17koltg9qlcrkb2np/ALApBrXJLyQgZJPOWw3DbhU?rlkey=dnkxhil349e3r8qbyey87fqyt&dl=0"
+              target="_blank"
+              rel="noopener noreferrer"
               >📥 Download Complete Dataset
             </a>
           </div>
@@ -382,54 +390,62 @@
         "downloadLinkContainer"
       );
       const formStatus = document.getElementById("formStatus");
+      const submitButton = document.getElementById("submitButton");
 
       form.addEventListener("submit", function (event) {
         event.preventDefault(); // Prevent default form submission
 
-        const formData = new FormData(form);
-        formStatus.style.display = "none"; // Hide previous status messages
-        formStatus.textContent = "";
+        // Disable submit button and show loading state
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
 
-        fetch(form.action, {
+        // Hide previous status messages
+        formStatus.style.display = "none";
+        formStatus.textContent = "";
+        formStatus.className = "";
+
+        // Collect form data
+        const formData = {
+          name: document.getElementById("name").value,
+          email: document.getElementById("email").value,
+          organization: document.getElementById("organization").value,
+          intended_use: document.getElementById("intended_use").value,
+        };
+
+        // Submit to Formspark using fetch
+        fetch("https://submit-form.com/vjP3hBMuB", {
           method: "POST",
-          body: formData,
           headers: {
+            "Content-Type": "application/json",
             Accept: "application/json",
           },
+          body: JSON.stringify(formData),
         })
-          .then((response) => {
+          .then(function (response) {
             if (response.ok) {
-              form.style.display = "none"; // Hide the form
-              downloadLinkContainer.style.display = "block"; // Show the download link
+              // Success - hide form and show download link
+              form.style.display = "none";
+              downloadLinkContainer.style.display = "block";
               formStatus.style.display = "none";
             } else {
-              response
-                .json()
-                .then((data) => {
-                  if (Object.hasOwn(data, "errors")) {
-                    formStatus.textContent = data["errors"]
-                      .map((error) => error["message"])
-                      .join(", ");
-                  } else if (data.error) {
-                    formStatus.textContent = data.error;
-                  } else {
-                    formStatus.textContent =
-                      "Oops! There was a problem submitting your form. Please try again.";
-                  }
-                  formStatus.style.display = "block";
-                })
-                .catch(() => {
-                  formStatus.textContent =
-                    "Oops! There was a problem processing the error response. Please try again.";
-                  formStatus.style.display = "block";
-                });
+              // Handle error response
+              return response.json().then((data) => {
+                throw new Error(data.message || "Form submission failed");
+              });
             }
           })
-          .catch((error) => {
-            formStatus.textContent =
-              "Network error or unable to connect to the form submission service. Please check your internet connection and try again.";
-            formStatus.style.display = "block";
+          .catch(function (error) {
             console.error("Form submission error:", error);
+            formStatus.textContent =
+              error.message ||
+              "There was a problem submitting your form. Please try again.";
+            formStatus.className = "error-message";
+            formStatus.style.display = "block";
+          })
+          .finally(function () {
+            // Re-enable submit button
+            submitButton.disabled = false;
+            submitButton.textContent = "Submit to Download Data";
           });
       });
     </script>
